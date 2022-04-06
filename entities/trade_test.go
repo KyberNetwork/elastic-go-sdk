@@ -80,6 +80,7 @@ var (
 func v2StylePool(token0, token1 *entities.Token, reserve0, reserve1 *entities.CurrencyAmount, feeAmount constants.FeeAmount) *Pool {
 	sqrtRatioX96 := utils.EncodeSqrtRatioX96(reserve1.Quotient(), reserve0.Quotient())
 	liquidity := new(big.Int).Sqrt(new(big.Int).Mul(reserve0.Quotient(), reserve1.Quotient()))
+	reinvestLiquidity := big.NewInt(0)
 	ticks := []Tick{
 		{
 			Index:          NearestUsableTick(utils.MinTick, constants.TickSpacings[feeAmount]),
@@ -100,7 +101,7 @@ func v2StylePool(token0, token1 *entities.Token, reserve0, reserve1 *entities.Cu
 	if err != nil {
 		panic(err)
 	}
-	pool, err := NewPool(token0, token1, feeAmount, sqrtRatioX96, liquidity, s, p)
+	pool, err := NewPool(token0, token1, feeAmount, sqrtRatioX96, liquidity, reinvestLiquidity, s, p)
 	if err != nil {
 		panic(err)
 	}

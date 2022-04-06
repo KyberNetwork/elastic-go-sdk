@@ -20,8 +20,8 @@ var (
 
 	feeT = constants.FeeMedium
 
-	pool01T, _    = entities.NewPool(token0T, token1T, feeT, utils.EncodeSqrtRatioX96(big.NewInt(1), big.NewInt(1)), big.NewInt(0), 0, nil)
-	pool1wethT, _ = entities.NewPool(token1T, core.WETH9[1], feeT, utils.EncodeSqrtRatioX96(big.NewInt(1), big.NewInt(1)), big.NewInt(0), 0, nil)
+	pool01T, _    = entities.NewPool(token0T, token1T, feeT, utils.EncodeSqrtRatioX96(big.NewInt(1), big.NewInt(1)), big.NewInt(0), big.NewInt(0), 0, nil)
+	pool1wethT, _ = entities.NewPool(token1T, core.WETH9[1], feeT, utils.EncodeSqrtRatioX96(big.NewInt(1), big.NewInt(1)), big.NewInt(0), big.NewInt(0), 0, nil)
 
 	recipientT         = common.HexToAddress("0x0000000000000000000000000000000000000003")
 	senderT            = common.HexToAddress("0x0000000000000000000000000000000000000004")

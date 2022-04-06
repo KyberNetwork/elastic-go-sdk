@@ -14,6 +14,8 @@ func ComputeSwapStep(sqrtRatioCurrentX96, sqrtRatioTargetX96, liquidity, amountR
 		return sqrtRatioCurrentX96, constants.Zero, constants.Zero, constants.Zero, nil
 	}
 
+	sqrtRatioNextX96 = big.NewInt(0)
+
 	usedAmount := calcReachAmount(sqrtRatioCurrentX96, sqrtRatioTargetX96, liquidity, feePips, exactIn, zeroForOne)
 
 	if exactIn && usedAmount.Cmp(amountRemaining) >= 0 || (!exactIn && usedAmount.Cmp(amountRemaining) <= 0) {
@@ -39,6 +41,8 @@ func ComputeSwapStep(sqrtRatioCurrentX96, sqrtRatioTargetX96, liquidity, amountR
 	} else {
 		deltaL = calcIncrementalLiquidity(sqrtRatioCurrentX96, sqrtRatioTargetX96, liquidity, absUsedAmount, exactIn, zeroForOne)
 	}
+
+	amountOut = calcReturnedAmount(sqrtRatioCurrentX96, sqrtRatioTargetX96, liquidity, deltaL, exactIn, zeroForOne)
 
 	return
 }
