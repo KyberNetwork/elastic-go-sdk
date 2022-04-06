@@ -42,7 +42,7 @@ func ComputeSwapStep(sqrtRatioCurrentX96, sqrtRatioTargetX96, liquidity, amountR
 		deltaL = calcIncrementalLiquidity(sqrtRatioCurrentX96, sqrtRatioTargetX96, liquidity, absUsedAmount, exactIn, zeroForOne)
 	}
 
-	amountOut = calcReturnedAmount(sqrtRatioCurrentX96, sqrtRatioTargetX96, liquidity, deltaL, exactIn, zeroForOne)
+	amountOut = calcReturnedAmount(sqrtRatioCurrentX96, sqrtRatioNextX96, liquidity, deltaL, exactIn, zeroForOne)
 
 	return
 }
