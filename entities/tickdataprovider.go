@@ -23,4 +23,12 @@ type TickDataProvider interface {
 	 * @param tickSpacing The tick spacing of the pool
 	 */
 	NextInitializedTickWithinOneWord(tick int, lte bool, tickSpacing int) (int, bool)
+
+	/**
+	 * Return the next tick that is initialized within a fixed distance
+	 * @param tick The current tick
+	 * @param lte Whether the next tick should be lte the current tick
+	 * @param distance The distance
+	 */
+	NextInitializedTickWithinFixedDistance(tick int, lte bool, distance int) (int, bool)
 }

@@ -109,6 +109,32 @@ func NextInitializedTickWithinOneWord(ticks []Tick, tick int, lte bool, tickSpac
 	}
 }
 
+func NextInitializedTickWithinFixedDistance(ticks []Tick, tick int, lte bool, distance int) (int, bool) {
+	if lte {
+		minimum := tick - distance
+
+		if IsBelowSmallest(ticks, tick) {
+			return minimum, false
+		}
+
+		index := NextInitializedTick(ticks, tick, lte).Index
+		nextInitializedTick := math.Max(float64(minimum), float64(index))
+
+		return int(nextInitializedTick), int(nextInitializedTick) == index
+	} else {
+		maximum := tick + distance
+
+		if IsAtOrAboveLargest(ticks, tick) {
+			return maximum, false
+		}
+
+		index := NextInitializedTick(ticks, tick, lte).Index
+		nextInitializedTick := math.Min(float64(maximum), float64(index))
+
+		return int(nextInitializedTick), int(nextInitializedTick) == index
+	}
+}
+
 // utils
 
 func isTicksSorted(ticks []Tick) bool {

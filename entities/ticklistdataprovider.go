@@ -19,3 +19,7 @@ func (p *TickListDataProvider) GetTick(tick int) Tick {
 func (p *TickListDataProvider) NextInitializedTickWithinOneWord(tick int, lte bool, tickSpacing int) (int, bool) {
 	return NextInitializedTickWithinOneWord(p.ticks, tick, lte, tickSpacing)
 }
+
+func (p *TickListDataProvider) NextInitializedTickWithinFixedDistance(tick int, lte bool, distance int) (int, bool) {
+	return NextInitializedTickWithinFixedDistance(p.ticks, tick, lte, distance)
+}
