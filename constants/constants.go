@@ -18,10 +18,10 @@ var (
 type FeeAmount uint64
 
 const (
-	FeeLowest FeeAmount = 100
-	FeeLow    FeeAmount = 500
-	FeeMedium FeeAmount = 3000
-	FeeHigh   FeeAmount = 10000
+	FeeLowest FeeAmount = 1
+	FeeLow    FeeAmount = 5
+	FeeMedium FeeAmount = 30
+	FeeHigh   FeeAmount = 100
 
 	FeeMax FeeAmount = 1000000
 )
