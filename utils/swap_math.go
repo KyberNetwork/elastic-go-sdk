@@ -6,7 +6,7 @@ import (
 	"github.com/KyberNetwork/promm-sdk-go/constants"
 )
 
-var Bps = new(big.Int).Exp(big.NewInt(10), big.NewInt(6), nil)
+var Bps = new(big.Int).Exp(big.NewInt(10), big.NewInt(4), nil)
 var TwoBps = new(big.Int).Mul(Bps, big.NewInt(2))
 
 func ComputeSwapStep(sqrtRatioCurrentX96, sqrtRatioTargetX96, liquidity, amountRemaining *big.Int, feePips constants.FeeAmount, exactIn, zeroForOne bool) (sqrtRatioNextX96, amountIn, amountOut, deltaL *big.Int, err error) {

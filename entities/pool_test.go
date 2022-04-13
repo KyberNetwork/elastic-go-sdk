@@ -13,9 +13,11 @@ import (
 )
 
 var (
-	USDC     = entities.NewToken(1, common.HexToAddress("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"), 6, "USDC", "USD Coin")
-	DAI      = entities.NewToken(1, common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"), 18, "DAI", "Dai Stablecoin")
-	OneEther = big.NewInt(1e18)
+	USDC       = entities.NewToken(1, common.HexToAddress("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"), 6, "USDC", "USD Coin")
+	DAI        = entities.NewToken(1, common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"), 18, "DAI", "Dai Stablecoin")
+	ETHRinkeby = entities.NewToken(4, common.HexToAddress("0xc778417E063141139Fce010982780140Aa0cD5Ab"), 18, "ETH", "Ether")
+	DAIRinkeby = entities.NewToken(4, common.HexToAddress("0xc7AD46e0b8a400Bb3C915120d284AafbA8fc4735"), 18, "DAI", "Dai Stablecoin")
+	OneEther   = big.NewInt(1e18)
 )
 
 func TestNewPool(t *testing.T) {
@@ -138,6 +140,40 @@ func newTestPool() *Pool {
 	}
 	return pool
 }
+
+func newTestPool2() *Pool {
+	liquidityNet1, _ := new(big.Int).SetString("120714648802705550448", 10)
+	liquidityGross1, _ := new(big.Int).SetString("120714648802705550448", 10)
+	liquidityNet2, _ := new(big.Int).SetString("-120714648802705550448", 10)
+	liquidityGross2, _ := new(big.Int).SetString("120714648802705550448", 10)
+	ticks := []Tick{
+		{
+			Index:          62160,
+			LiquidityNet:   liquidityNet1,
+			LiquidityGross: liquidityGross1,
+		},
+		{
+			Index:          92160,
+			LiquidityNet:   liquidityNet2,
+			LiquidityGross: liquidityGross2,
+		},
+	}
+
+	p, err := NewTickListDataProvider(ticks, constants.TickSpacings[constants.FeeMedium])
+	if err != nil {
+		panic(err)
+	}
+	price, _ := new(big.Int).SetString("4317840471017651404712833792646", 10)
+	liquidity, _ := new(big.Int).SetString("120714648802705550448", 10)
+	reinvestL, _ := new(big.Int).SetString("81785081063693", 10)
+
+	pool, err := NewPool(ETHRinkeby, DAIRinkeby, constants.FeeMedium, price, liquidity, reinvestL, 79967, p)
+	if err != nil {
+		panic(err)
+	}
+	return pool
+}
+
 func TestGetOutputAmount(t *testing.T) {
 	pool := newTestPool()
 
@@ -158,6 +194,19 @@ func TestGetOutputAmount(t *testing.T) {
 	}
 	assert.True(t, outputAmount.Currency.Equal(USDC.Currency))
 	assert.Equal(t, big.NewInt(99), outputAmount.Quotient())
+
+	pool = newTestPool2()
+
+	// ETH -> DAI
+	inputAmount = entities.FromRawAmount(ETHRinkeby.Currency, big.NewInt(1000000000000000000))
+	outputAmount, _, err = pool.GetOutputAmount(inputAmount, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.True(t, outputAmount.Currency.Equal(DAIRinkeby.Currency))
+
+	expectValue, _ := new(big.Int).SetString("2041157946037959934727", 10)
+	assert.Equal(t, expectValue, outputAmount.Quotient())
 }
 
 func TestGetInputAmount(t *testing.T) {
