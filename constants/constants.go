@@ -10,7 +10,7 @@ import (
 const PoolInitCodeHash = "0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54"
 
 var (
-	FactoryAddress = common.HexToAddress("0x1F98431c8aD98523631AE4a59f267346ea31F984")
+	FactoryAddress = common.HexToAddress("0xdEd9a1b7C954f0B2A431e9E0C1DaB3C24605A4e9")
 	AddressZero    = common.HexToAddress("0x0000000000000000000000000000000000000000")
 )
 
@@ -18,20 +18,22 @@ var (
 type FeeAmount uint64
 
 const (
-	FeeLowest FeeAmount = 1
-	FeeLow    FeeAmount = 4
-	FeeMedium FeeAmount = 30
-	FeeHigh   FeeAmount = 100
+	FeeLowest  FeeAmount = 8
+	FeeLow     FeeAmount = 10
+	FeeMedium  FeeAmount = 40
+	FeeHigh    FeeAmount = 300
+	FeeHighest FeeAmount = 1000
 
 	FeeMax FeeAmount = 10000
 )
 
 // The default factory tick spacings by fee amount.
 var TickSpacings = map[FeeAmount]int{
-	FeeLowest: 1,
-	FeeLow:    8,
-	FeeMedium: 60,
-	FeeHigh:   200,
+	FeeLowest:  1,
+	FeeLow:     1,
+	FeeMedium:  8,
+	FeeHigh:    60,
+	FeeHighest: 200,
 }
 
 var (

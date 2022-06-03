@@ -16,8 +16,10 @@ const (
 
 var (
 	Q32             = big.NewInt(1 << 32)
-	MinSqrtRatio    = big.NewInt(4295128739)                                                          // The sqrt ratio corresponding to the minimum tick that could be used on any pool.
-	MaxSqrtRatio, _ = new(big.Int).SetString("1461446703485210103287273052203988822378723970342", 10) // The sqrt ratio corresponding to the maximum tick that could be used on any pool.
+	MinSqrtRatio    = big.NewInt(4295128739) // The sqrt ratio corresponding to the minimum tick that could be used on any pool.
+	MaxSqrtRatio, _ = new(big.Int).SetString(
+		"1461446703485210103287273052203988822378723970342", 10,
+	) // The sqrt ratio corresponding to the maximum tick that could be used on any pool.
 )
 
 var (
@@ -33,10 +35,8 @@ func mulShift(val *big.Int, mulBy string) *big.Int {
 	return new(big.Int).Rsh(new(big.Int).Mul(val, mulByBig), 128)
 }
 
-/**
- * Returns the sqrt ratio as a Q64.96 for the given tick. The sqrt ratio is computed as sqrt(1.0001)^tick
- * @param tick the tick for which to compute the sqrt ratio
- */
+// GetSqrtRatioAtTick returns the sqrt ratio as a Q64.96 for the given tick. The sqrt ratio is computed as sqrt(1.0001)^tick
+// @param tick the tick for which to compute the sqrt ratio
 func GetSqrtRatioAtTick(tick int) (*big.Int, error) {
 	if tick < MinTick || tick > MaxTick {
 		return nil, ErrInvalidTick
@@ -114,17 +114,15 @@ func GetSqrtRatioAtTick(tick int) (*big.Int, error) {
 
 	// back to Q96
 	if new(big.Int).Rem(ratio, Q32).Cmp(constants.Zero) > 0 {
-		return new(big.Int).Add((new(big.Int).Div(ratio, Q32)), constants.One), nil
+		return new(big.Int).Add(new(big.Int).Div(ratio, Q32), constants.One), nil
 	} else {
 		return new(big.Int).Div(ratio, Q32), nil
 	}
 }
 
-/**
- * Returns the tick corresponding to a given sqrt ratio, s.t. #getSqrtRatioAtTick(tick) <= sqrtRatioX96
- * and #getSqrtRatioAtTick(tick + 1) > sqrtRatioX96
- * @param sqrtRatioX96 the sqrt ratio as a Q64.96 for which to compute the tick
- */
+// GetTickAtSqrtRatio Returns the tick corresponding to a given sqrt ratio, s.t. #getSqrtRatioAtTick(tick) <= sqrtRatioX96
+// and #getSqrtRatioAtTick(tick + 1) > sqrtRatioX96
+// @param sqrtRatioX96 the sqrt ratio as a Q64.96 for which to compute the tick
 func GetTickAtSqrtRatio(sqrtRatioX96 *big.Int) (int, error) {
 	if sqrtRatioX96.Cmp(MinSqrtRatio) < 0 || sqrtRatioX96.Cmp(MaxSqrtRatio) >= 0 {
 		return 0, ErrInvalidSqrtRatio
