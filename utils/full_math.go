@@ -15,6 +15,12 @@ func MulDivRoundingUp(a, b, denominator *big.Int) *big.Int {
 	return result
 }
 
+func MulDivRoundingDown(a, b, denominator *big.Int) *big.Int {
+	product := new(big.Int).Mul(a, b)
+	result := new(big.Int).Quo(product, denominator)
+	return result
+}
+
 func MulDiv(a, b, denominator *big.Int) *big.Int {
 	product := new(big.Int).Mul(a, b)
 
