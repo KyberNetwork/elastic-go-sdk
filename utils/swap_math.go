@@ -253,7 +253,7 @@ func estimateIncrementalLiquidity(
 		} else {
 			// deltaL = feeInFeeUnits * absDelta * / (currentSqrtP * 2)
 			// Because nextSqrtP = (liquidity + absDelta / currentSqrtP) * currentSqrtP / (liquidity + deltaL)
-			// so we round up deltaL, to round down nextSqrtP
+			// so we round down deltaL, to round up nextSqrtP
 			deltaL = MulDivRoundingDown(
 				constants.Q96, new(big.Int).Mul(absAmount, fee), new(big.Int).Mul(TwoFeeUnits, sqrtRatioCurrentX96),
 			)

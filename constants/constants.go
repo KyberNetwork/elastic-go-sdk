@@ -24,7 +24,7 @@ const (
 	FeeHigh    FeeAmount = 300
 	FeeHighest FeeAmount = 1000
 
-	FeeMax FeeAmount = 10000
+	FeeMax FeeAmount = 100000
 )
 
 // The default factory tick spacings by fee amount.
