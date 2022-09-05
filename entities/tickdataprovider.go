@@ -14,7 +14,7 @@ type TickDataProvider interface {
 	 * Return information corresponding to a specific tick
 	 * @param tick the tick to load
 	 */
-	GetTick(tick int) Tick
+	GetTick(tick int) (Tick, error)
 
 	/**
 	 * Return the next tick that is initialized within a single word
@@ -22,7 +22,7 @@ type TickDataProvider interface {
 	 * @param lte Whether the next tick should be lte the current tick
 	 * @param tickSpacing The tick spacing of the pool
 	 */
-	NextInitializedTickWithinOneWord(tick int, lte bool, tickSpacing int) (int, bool)
+	NextInitializedTickWithinOneWord(tick int, lte bool, tickSpacing int) (int, bool, error)
 
 	/**
 	 * Return the next tick that is initialized within a fixed distance
@@ -30,5 +30,5 @@ type TickDataProvider interface {
 	 * @param lte Whether the next tick should be lte the current tick
 	 * @param distance The distance
 	 */
-	NextInitializedTickWithinFixedDistance(tick int, lte bool, distance int) (int, bool)
+	NextInitializedTickWithinFixedDistance(tick int, lte bool, distance int) (int, bool, error)
 }
