@@ -262,7 +262,7 @@ func estimateIncrementalLiquidity(
 		// obtain the smaller root of the quadratic equation
 		// ax^2 - 2bx + c = 0 such that b > 0, and x denotes deltaL
 		a := fee
-		b := new(big.Int).Sub(FeeUnits, fee)
+		b := new(big.Int).Mul(new(big.Int).Sub(FeeUnits, fee), liquidity)
 		c := new(big.Int).Mul(new(big.Int).Mul(fee, liquidity), absAmount)
 
 		if isToken0 {

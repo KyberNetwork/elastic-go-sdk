@@ -3,7 +3,7 @@ package utils
 import (
 	"math/big"
 
-	"github.com/KyberNetwork/uniswap-sdk-core/entities"
+	"github.com/daoleno/uniswap-sdk-core/entities"
 
 	"github.com/KyberNetwork/promm-sdk-go/constants"
 )
@@ -27,9 +27,9 @@ func TickToPrice(baseToken *entities.Token, quoteToken *entities.Token, tick int
 		return nil, err
 	}
 	if sorted {
-		return entities.NewPrice(baseToken.Currency, quoteToken.Currency, constants.Q192, ratioX192), nil
+		return entities.NewPrice(baseToken, quoteToken, constants.Q192, ratioX192), nil
 	}
-	return entities.NewPrice(baseToken.Currency, quoteToken.Currency, ratioX192, constants.Q192), nil
+	return entities.NewPrice(baseToken, quoteToken, ratioX192, constants.Q192), nil
 }
 
 /**

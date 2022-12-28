@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/KyberNetwork/uniswap-sdk-core/entities"
+	"github.com/daoleno/uniswap-sdk-core/entities"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 
@@ -81,7 +81,7 @@ func TestNewPool(t *testing.T) {
 
 func TestGetAddress(t *testing.T) {
 	addr, _ := GetAddress(USDC, DAI, constants.FeeLow, "")
-	assert.Equal(t, addr, common.HexToAddress("0x6c6Bc977E13Df9b0de53b251522280BB72383700"), "matches an example")
+	assert.Equal(t, addr, common.HexToAddress("0xE5e30b9aDD54E8E6DDf05b76693ad690fEe56a25"), "matches an example")
 }
 
 func TestToken0(t *testing.T) {
@@ -246,32 +246,32 @@ func TestGetOutputAmount(t *testing.T) {
 	pool := newTestPool()
 
 	// USDC -> DAI
-	inputAmount := entities.FromRawAmount(USDC.Currency, big.NewInt(1000000))
+	inputAmount := entities.FromRawAmount(USDC, big.NewInt(1000000))
 	outputAmount, _, err := pool.GetOutputAmount(inputAmount, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.True(t, outputAmount.Currency.Equal(DAI.Currency))
+	assert.True(t, outputAmount.Currency.Equal(DAI))
 	assert.Equal(t, big.NewInt(999499), outputAmount.Quotient())
 
 	// DAI -> USDC
-	inputAmount = entities.FromRawAmount(DAI.Currency, big.NewInt(24295310180196433))
+	inputAmount = entities.FromRawAmount(DAI, big.NewInt(24295310180196433))
 	outputAmount, _, err = pool.GetOutputAmount(inputAmount, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.True(t, outputAmount.Currency.Equal(USDC.Currency))
+	assert.True(t, outputAmount.Currency.Equal(USDC))
 	assert.Equal(t, big.NewInt(23707188978482194), outputAmount.Quotient())
 
 	pool = newTestPool2()
 
 	// ETH -> DAI
-	inputAmount = entities.FromRawAmount(ETHRinkeby.Currency, big.NewInt(1000000000000000000))
+	inputAmount = entities.FromRawAmount(ETHRinkeby, big.NewInt(1000000000000000000))
 	outputAmount, _, err = pool.GetOutputAmount(inputAmount, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.True(t, outputAmount.Currency.Equal(DAIRinkeby.Currency))
+	assert.True(t, outputAmount.Currency.Equal(DAIRinkeby))
 
 	expectValue, _ := new(big.Int).SetString("2045603787129768717773", 10)
 	assert.Equal(t, expectValue, outputAmount.Quotient())
@@ -281,20 +281,20 @@ func TestGetInputAmount(t *testing.T) {
 	pool := newTestPool()
 
 	// USDC -> DAI
-	outputAmount := entities.FromRawAmount(DAI.Currency, big.NewInt(98))
+	outputAmount := entities.FromRawAmount(DAI, big.NewInt(98))
 	inputAmount, _, err := pool.GetInputAmount(outputAmount, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.True(t, inputAmount.Currency.Equal(USDC.Currency))
-	assert.Equal(t, inputAmount.Quotient(), big.NewInt(100))
+	assert.True(t, inputAmount.Currency.Equal(USDC))
+	assert.Equal(t, inputAmount.Quotient(), big.NewInt(98))
 
 	// DAI -> USDC
-	outputAmount = entities.FromRawAmount(USDC.Currency, big.NewInt(98))
+	outputAmount = entities.FromRawAmount(USDC, big.NewInt(98))
 	inputAmount, _, err = pool.GetInputAmount(outputAmount, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.True(t, inputAmount.Currency.Equal(DAI.Currency))
-	assert.Equal(t, inputAmount.Quotient(), big.NewInt(100))
+	assert.True(t, inputAmount.Currency.Equal(DAI))
+	assert.Equal(t, inputAmount.Quotient(), big.NewInt(98))
 }

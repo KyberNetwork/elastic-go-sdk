@@ -76,7 +76,7 @@ func GetTick(ticks []Tick, index int) (Tick, error) {
 		return EmptyTick, err
 	}
 
-	if tickIndex < 0 {
+	if tickIndex != index {
 		return EmptyTick, ErrInvalidTickIndex
 	}
 
