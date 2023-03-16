@@ -2,9 +2,7 @@ package entities
 
 import (
 	"errors"
-	"fmt"
 	"math/big"
-	"time"
 
 	"github.com/daoleno/uniswap-sdk-core/entities"
 	"github.com/ethereum/go-ethereum/common"
@@ -165,7 +163,6 @@ func (p *Pool) ChainID() uint {
 func (p *Pool) GetOutputAmount(
 	inputAmount *entities.CurrencyAmount, sqrtPriceLimitX96 *big.Int,
 ) (*entities.CurrencyAmount, *Pool, error) {
-	var startTime = time.Now().UnixNano()
 	if !(inputAmount.Currency.IsToken() && p.InvolvesToken(inputAmount.Currency.Wrapped())) {
 		return nil, nil, ErrTokenNotInvolved
 	}
@@ -187,10 +184,6 @@ func (p *Pool) GetOutputAmount(
 	)
 	if err != nil {
 		return nil, nil, err
-	}
-	executionTime := (time.Now().UnixNano() - startTime) / 1000000
-	if executionTime > 20 {
-		fmt.Printf("GetOutputAmount Running time: %v(ms)\n\n\n", executionTime)
 	}
 	return entities.FromRawAmount(
 		outputToken, new(big.Int).Mul(outputAmount, constants.NegativeOne),
