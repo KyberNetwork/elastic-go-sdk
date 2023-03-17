@@ -18,22 +18,32 @@ var (
 type FeeAmount uint64
 
 const (
-	FeeLowest  FeeAmount = 8
-	FeeLow     FeeAmount = 10
-	FeeMedium  FeeAmount = 40
-	FeeHigh    FeeAmount = 300
-	FeeHighest FeeAmount = 1000
+	Fee0008 FeeAmount = 8
+	Fee001  FeeAmount = 10
+	Fee002  FeeAmount = 20
+	Fee004  FeeAmount = 40
+	Fee01   FeeAmount = 100
+	Fee025  FeeAmount = 250
+	Fee03   FeeAmount = 300
+	Fee1    FeeAmount = 1000
+	Fee2    FeeAmount = 2000
+	Fee5    FeeAmount = 5000
 
 	FeeMax FeeAmount = 100000
 )
 
 // The default factory tick spacings by fee amount.
 var TickSpacings = map[FeeAmount]int{
-	FeeLowest:  1,
-	FeeLow:     1,
-	FeeMedium:  8,
-	FeeHigh:    60,
-	FeeHighest: 200,
+	Fee0008: 1,
+	Fee001:  1,
+	Fee002:  2,
+	Fee004:  8,
+	Fee01:   10,
+	Fee025:  25,
+	Fee03:   60,
+	Fee1:    200,
+	Fee2:    100,
+	Fee5:    100,
 }
 
 var (

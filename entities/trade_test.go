@@ -24,56 +24,56 @@ var (
 		token1,
 		entities.FromRawAmount(token0, big.NewInt(100000)),
 		entities.FromRawAmount(token1, big.NewInt(100000)),
-		constants.FeeMedium,
+		constants.Fee004,
 	)
 	pool_0_2 = v2StylePool(
 		token0,
 		token2,
 		entities.FromRawAmount(token0, big.NewInt(100000)),
 		entities.FromRawAmount(token2, big.NewInt(110000)),
-		constants.FeeMedium,
+		constants.Fee004,
 	)
 	pool_0_3 = v2StylePool(
 		token0,
 		token3,
 		entities.FromRawAmount(token0, big.NewInt(100000)),
 		entities.FromRawAmount(token3, big.NewInt(90000)),
-		constants.FeeMedium,
+		constants.Fee004,
 	)
 	pool_1_2 = v2StylePool(
 		token1,
 		token2,
 		entities.FromRawAmount(token1, big.NewInt(120000)),
 		entities.FromRawAmount(token2, big.NewInt(100000)),
-		constants.FeeMedium,
+		constants.Fee004,
 	)
 	pool_1_3 = v2StylePool(
 		token1,
 		token3,
 		entities.FromRawAmount(token1, big.NewInt(120000)),
 		entities.FromRawAmount(token3, big.NewInt(130000)),
-		constants.FeeMedium,
+		constants.Fee004,
 	)
 	pool_weth_0 = v2StylePool(
 		entities.WETH9[1],
 		token0,
 		entities.FromRawAmount(entities.WETH9[1], big.NewInt(100000)),
 		entities.FromRawAmount(token0, big.NewInt(100000)),
-		constants.FeeMedium,
+		constants.Fee004,
 	)
 	pool_weth_1 = v2StylePool(
 		entities.WETH9[1],
 		token1,
 		entities.FromRawAmount(entities.WETH9[1], big.NewInt(100000)),
 		entities.FromRawAmount(token1, big.NewInt(100000)),
-		constants.FeeMedium,
+		constants.Fee004,
 	)
 	pool_weth_2 = v2StylePool(
 		entities.WETH9[1],
 		token2,
 		entities.FromRawAmount(entities.WETH9[1], big.NewInt(100000)),
 		entities.FromRawAmount(token2, big.NewInt(100000)),
-		constants.FeeMedium,
+		constants.Fee004,
 	)
 )
 
