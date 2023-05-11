@@ -11,34 +11,43 @@ import (
 	"github.com/KyberNetwork/elastic-go-sdk/utils"
 )
 
-var (
-	ErrFeeTooHigh               = errors.New("Fee too high")
-	ErrInvalidSqrtRatioX96      = errors.New("Invalid sqrtRatioX96")
-	ErrTokenNotInvolved         = errors.New("Token not involved in pool")
-	ErrSqrtPriceLimitX96TooLow  = errors.New("SqrtPriceLimitX96 too low")
-	ErrSqrtPriceLimitX96TooHigh = errors.New("SqrtPriceLimitX96 too high")
+const (
+	MaxTickDistance = 480
 )
 
-type StepComputations struct {
-	startSqrtP     *big.Int
-	tickNext       int
-	initialized    bool
-	nextSqrtP      *big.Int
-	usedAmount     *big.Int
-	returnedAmount *big.Int
-	deltaL         *big.Int
+var (
+	ErrFeeTooHigh          = errors.New("fee too high")
+	ErrInvalidSqrtRatioX96 = errors.New("invalid sqrtRatioX96")
+	ErrTokenNotInvolved    = errors.New("token not involved in pool")
+	ErrBadLimitSqrtP       = errors.New("bad limitSqrtP")
+)
+
+type SwapData struct {
+	specifiedAmount *big.Int // the specified amount (could be tokenIn or tokenOut)
+	returnedAmount  *big.Int // the opposite amout of sourceQty
+	sqrtP           *big.Int // current sqrt(price), multiplied by 2^96
+	currentTick     int      // the tick associated with the current price
+	nextTick        int      // the next initialized tick
+	nextSqrtP       *big.Int // the price of nextTick
+	isToken0        bool     // true if specifiedAmount is in token0, false if in token1
+	isExactInput    bool     // true = input qty, false = output qty
+	baseL           *big.Int // the cached base pool liquidity without reinvestment liquidity
+	reinvestL       *big.Int // the cached reinvestment liquidity
+	startSqrtP      *big.Int // the start sqrt price before each iteration
 }
 
 // Represents a V3 pool
 type Pool struct {
-	Token0            *entities.Token
-	Token1            *entities.Token
-	Fee               constants.FeeAmount
-	SqrtRatioX96      *big.Int
-	Liquidity         *big.Int
-	ReinvestLiquidity *big.Int
-	TickCurrent       int
-	TickDataProvider  TickDataProvider
+	Token0             *entities.Token
+	Token1             *entities.Token
+	Fee                constants.FeeAmount
+	SqrtP              *big.Int
+	BaseL              *big.Int
+	ReinvestL          *big.Int
+	CurrentTick        int
+	NearestCurrentTick int
+	Ticks              map[int]TickData
+	InitializedTicks   map[int]LinkedListData
 
 	token0Price *entities.Price
 	token1Price *entities.Price
@@ -61,11 +70,28 @@ func GetAddress(
  * @param ticks The current state of the pool ticks or a data provider that can return tick data
  */
 func NewPool(
-	tokenA, tokenB *entities.Token, fee constants.FeeAmount, sqrtRatioX96 *big.Int,
-	liquidity, reinvestLiquidity *big.Int, tickCurrent int, ticks TickDataProvider,
+	tokenA *entities.Token,
+	tokenB *entities.Token,
+	fee constants.FeeAmount,
+	sqrtRatioX96 *big.Int,
+	liquidity *big.Int,
+	reinvestLiquidity *big.Int,
+	tickCurrent int,
+	tickDataProvider TickDataProvider,
 ) (*Pool, error) {
 	if fee >= constants.FeeMax {
 		return nil, ErrFeeTooHigh
+	}
+
+	token0 := tokenA
+	token1 := tokenB
+	isSorted, err := tokenA.SortsBefore(tokenB)
+	if err != nil {
+		return nil, err
+	}
+	if !isSorted {
+		token0 = tokenB
+		token1 = tokenA
 	}
 
 	tickCurrentSqrtRatioX96, err := utils.GetSqrtRatioAtTick(tickCurrent)
@@ -80,26 +106,35 @@ func NewPool(
 	if sqrtRatioX96.Cmp(tickCurrentSqrtRatioX96) < 0 || sqrtRatioX96.Cmp(nextTickSqrtRatioX96) > 0 {
 		return nil, ErrInvalidSqrtRatioX96
 	}
-	token0 := tokenA
-	token1 := tokenB
-	isSorted, err := tokenA.SortsBefore(tokenB)
-	if err != nil {
-		return nil, err
-	}
-	if !isSorted {
-		token0 = tokenB
-		token1 = tokenA
+
+	var nearestCurrentTick int
+	if tickDataProvider == nil {
+		tickDataProvider, err = NewTickListDataProvider([]Tick{}, constants.TickSpacings[fee])
+		if err != nil {
+			return nil, err
+		}
+
+		nearestCurrentTick = utils.MinTick
+	} else {
+		nearestCurrentTick, err = tickDataProvider.GetNearestCurrentTick(tickCurrent)
+		if err != nil {
+			return nil, err
+		}
 	}
 
+	ticks, initializedTicks := tickDataProvider.TransformToMap()
+
 	return &Pool{
-		Token0:            token0,
-		Token1:            token1,
-		Fee:               fee,
-		SqrtRatioX96:      sqrtRatioX96,
-		Liquidity:         liquidity,
-		ReinvestLiquidity: reinvestLiquidity,
-		TickCurrent:       tickCurrent,
-		TickDataProvider:  ticks,
+		Token0:             token0,
+		Token1:             token1,
+		Fee:                fee,
+		SqrtP:              sqrtRatioX96,
+		BaseL:              liquidity,
+		ReinvestL:          reinvestLiquidity,
+		CurrentTick:        tickCurrent,
+		NearestCurrentTick: nearestCurrentTick,
+		Ticks:              ticks,
+		InitializedTicks:   initializedTicks,
 	}, nil
 }
 
@@ -118,7 +153,7 @@ func (p *Pool) Token0Price() *entities.Price {
 		return p.token0Price
 	}
 	p.token0Price = entities.NewPrice(
-		p.Token0, p.Token1, constants.Q192, new(big.Int).Mul(p.SqrtRatioX96, p.SqrtRatioX96),
+		p.Token0, p.Token1, constants.Q192, new(big.Int).Mul(p.SqrtP, p.SqrtP),
 	)
 	return p.token0Price
 }
@@ -129,7 +164,7 @@ func (p *Pool) Token1Price() *entities.Price {
 		return p.token1Price
 	}
 	p.token1Price = entities.NewPrice(
-		p.Token1, p.Token0, new(big.Int).Mul(p.SqrtRatioX96, p.SqrtRatioX96), constants.Q192,
+		p.Token1, p.Token0, new(big.Int).Mul(p.SqrtP, p.SqrtP), constants.Q192,
 	)
 	return p.token1Price
 }
@@ -161,33 +196,31 @@ func (p *Pool) ChainID() uint {
  * @returns The output amount and the pool with updated state
  */
 func (p *Pool) GetOutputAmount(
-	inputAmount *entities.CurrencyAmount, sqrtPriceLimitX96 *big.Int,
+	inputAmount *entities.CurrencyAmount, limitSqrtP *big.Int,
 ) (*entities.CurrencyAmount, *Pool, error) {
 	if !(inputAmount.Currency.IsToken() && p.InvolvesToken(inputAmount.Currency.Wrapped())) {
 		return nil, nil, ErrTokenNotInvolved
 	}
 	zeroForOne := inputAmount.Currency.Equal(p.Token0)
-	outputAmount, sqrtRatioX96, liquidity, reinvestLiquidity, tickCurrent, err := p.swap(
-		zeroForOne, inputAmount.Quotient(), sqrtPriceLimitX96,
+	returnedAmount, baseL, reinvestL, sqrtP, currentTick, nextTick, err := p.swap(
+		zeroForOne,
+		inputAmount.Quotient(),
+		limitSqrtP,
 	)
 	if err != nil {
 		return nil, nil, err
 	}
+
 	var outputToken *entities.Token
 	if zeroForOne {
 		outputToken = p.Token1
 	} else {
 		outputToken = p.Token0
 	}
-	pool, err := NewPool(
-		p.Token0, p.Token1, p.Fee, sqrtRatioX96, liquidity, reinvestLiquidity, tickCurrent, p.TickDataProvider,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-	return entities.FromRawAmount(
-		outputToken, new(big.Int).Mul(outputAmount, constants.NegativeOne),
-	), pool, nil
+
+	newPoolState := p._updatePoolData(baseL, reinvestL, sqrtP, currentTick, nextTick)
+
+	return entities.FromRawAmount(outputToken, new(big.Int).Mul(returnedAmount, constants.NegativeOne)), newPoolState, nil
 }
 
 /**
@@ -197,31 +230,51 @@ func (p *Pool) GetOutputAmount(
  * @returns The input amount and the pool with updated state
  */
 func (p *Pool) GetInputAmount(
-	outputAmount *entities.CurrencyAmount, sqrtPriceLimitX96 *big.Int,
+	outputAmount *entities.CurrencyAmount, limitSqrtP *big.Int,
 ) (*entities.CurrencyAmount, *Pool, error) {
 	if !(outputAmount.Currency.IsToken() && p.InvolvesToken(outputAmount.Currency.Wrapped())) {
 		return nil, nil, ErrTokenNotInvolved
 	}
 	zeroForOne := outputAmount.Currency.Equal(p.Token1)
-	inputAmount, sqrtRatioX96, liquidity, reinvestLiquidity, tickCurrent, err := p.swap(
-		zeroForOne, new(big.Int).Mul(outputAmount.Quotient(), constants.NegativeOne), sqrtPriceLimitX96,
+	returnedAmount, baseL, reinvestL, sqrtP, currentTick, nextTick, err := p.swap(
+		zeroForOne,
+		new(big.Int).Mul(outputAmount.Quotient(), constants.NegativeOne),
+		limitSqrtP,
 	)
 	if err != nil {
 		return nil, nil, err
 	}
+
 	var inputToken *entities.Token
 	if zeroForOne {
 		inputToken = p.Token0
 	} else {
 		inputToken = p.Token1
 	}
-	pool, err := NewPool(
-		p.Token0, p.Token1, p.Fee, sqrtRatioX96, liquidity, reinvestLiquidity, tickCurrent, p.TickDataProvider,
-	)
-	if err != nil {
-		return nil, nil, err
+
+	newPoolState := p._updatePoolData(baseL, reinvestL, sqrtP, currentTick, nextTick)
+
+	return entities.FromRawAmount(inputToken, returnedAmount), newPoolState, nil
+}
+
+// Source: https://github.com/KyberNetwork/ks-elastic-sc-v2/blob/3ba84353cbd88f30f222bb9c673e242a2e46fd12/contracts/PoolTicksState.sol#L121-L147C4
+func (p *Pool) _getInitialSwapData(willUpTick bool) (
+	baseL *big.Int,
+	reinvestL *big.Int,
+	sqrtP *big.Int,
+	currentTick int,
+	nextTick int,
+) {
+	baseL = p.BaseL
+	reinvestL = p.ReinvestL
+	sqrtP = p.SqrtP
+	currentTick = p.CurrentTick
+	nextTick = p.NearestCurrentTick
+	if willUpTick {
+		nextTick = p.InitializedTicks[nextTick].Next
 	}
-	return entities.FromRawAmount(inputToken, inputAmount), pool, nil
+
+	return
 }
 
 /**
@@ -234,141 +287,171 @@ func (p *Pool) GetInputAmount(
  * @returns liquidity
  * @returns tickCurrent
  */
-func (p *Pool) swap(isToken0 bool, amountSpecified, sqrtPriceLimitX96 *big.Int) (
-	amountCalCulated *big.Int, sqrtRatioX96 *big.Int, liquidity, reinvestLiquidity *big.Int, tickCurrent int, err error,
+func (p *Pool) swap(isToken0 bool, swapQty *big.Int, limitSqrtP *big.Int) (
+	*big.Int, *big.Int, *big.Int, *big.Int, int, int, error,
 ) {
-	if sqrtPriceLimitX96 == nil {
-		if isToken0 {
-			sqrtPriceLimitX96 = new(big.Int).Add(utils.MinSqrtRatio, constants.One)
-		} else {
-			sqrtPriceLimitX96 = new(big.Int).Sub(utils.MaxSqrtRatio, constants.One)
-		}
-	}
-
-	if isToken0 {
-		if sqrtPriceLimitX96.Cmp(utils.MinSqrtRatio) < 0 {
-			return nil, nil, nil, nil, 0, ErrSqrtPriceLimitX96TooLow
-		}
-		if sqrtPriceLimitX96.Cmp(p.SqrtRatioX96) >= 0 {
-			return nil, nil, nil, nil, 0, ErrSqrtPriceLimitX96TooHigh
-		}
-	} else {
-		if sqrtPriceLimitX96.Cmp(utils.MaxSqrtRatio) > 0 {
-			return nil, nil, nil, nil, 0, ErrSqrtPriceLimitX96TooHigh
-		}
-		if sqrtPriceLimitX96.Cmp(p.SqrtRatioX96) <= 0 {
-			return nil, nil, nil, nil, 0, ErrSqrtPriceLimitX96TooLow
-		}
-	}
-
-	isExactInput := amountSpecified.Cmp(constants.Zero) >= 0
+	var swapData SwapData
+	swapData.specifiedAmount = swapQty
+	swapData.isToken0 = isToken0
+	swapData.isExactInput = swapData.specifiedAmount.Cmp(constants.Zero) > 0
+	willUpTick := swapData.isExactInput != isToken0
 
 	// keep track of swap state
+	swapData.baseL,
+		swapData.reinvestL,
+		swapData.sqrtP,
+		swapData.currentTick,
+		swapData.nextTick = p._getInitialSwapData(willUpTick)
+	swapData.returnedAmount = constants.Zero
 
-	state := struct {
-		specifiedAmount *big.Int
-		returnedAmount  *big.Int
-		sqrtP           *big.Int
-		tick            int
-		liquidity       *big.Int
-		reinvestL       *big.Int
-	}{
-		specifiedAmount: amountSpecified,
-		returnedAmount:  constants.Zero,
-		sqrtP:           p.SqrtRatioX96,
-		tick:            p.TickCurrent,
-		liquidity:       p.Liquidity,
-		reinvestL:       p.ReinvestLiquidity,
+	// ad-hoc logic in the SDK in case of misconfiguration in the SDK's consumer code
+	if limitSqrtP == nil {
+		if willUpTick {
+			limitSqrtP = new(big.Int).Sub(utils.MaxSqrtRatio, constants.One)
+		} else {
+			limitSqrtP = new(big.Int).Add(utils.MinSqrtRatio, constants.One)
+		}
 	}
 
-	// start swap while loop
-	for state.specifiedAmount.Cmp(constants.Zero) != 0 && state.sqrtP.Cmp(sqrtPriceLimitX96) != 0 {
-		var step StepComputations
-		step.startSqrtP = state.sqrtP
+	if willUpTick {
+		if limitSqrtP.Cmp(p.SqrtP) < 0 || limitSqrtP.Cmp(utils.MaxSqrtRatio) > 0 {
+			return nil, nil, nil, nil, 0, 0, ErrBadLimitSqrtP
+		}
+	} else {
+		if limitSqrtP.Cmp(p.SqrtP) > 0 || limitSqrtP.Cmp(utils.MinSqrtRatio) < 0 {
+			return nil, nil, nil, nil, 0, 0, ErrBadLimitSqrtP
+		}
+	}
 
-		// because each iteration of the while loop rounds, we can't optimize this code (relative to the smart contract)
-		// by simply traversing to the next available tick, we instead need to exactly replicate
-		// tickBitmap.nextInitializedTickWithinOneWord
-		step.tickNext, step.initialized, err = p.TickDataProvider.NextInitializedTickWithinFixedDistance(
-			state.tick, isToken0, 480,
-		)
+	var err error
+
+	// continue swapping while specified input/output isn't satisfied or price limit not reached
+	for swapData.specifiedAmount.Cmp(constants.Zero) != 0 && swapData.sqrtP.Cmp(limitSqrtP) != 0 {
+		// math calculations work with the assumption that the price diff is capped to 5%
+		// since tick distance is uncapped between currentTick and nextTick
+		// we use tempNextTick to satisfy our assumption with MAX_TICK_DISTANCE is set to be matched this condition
+
+		tempNextTick := swapData.nextTick
+		if willUpTick && tempNextTick > MaxTickDistance+swapData.currentTick {
+			tempNextTick = swapData.currentTick + MaxTickDistance
+		} else if !willUpTick && tempNextTick < swapData.currentTick-MaxTickDistance {
+			tempNextTick = swapData.currentTick - MaxTickDistance
+		}
+
+		swapData.startSqrtP = swapData.sqrtP
+		swapData.nextSqrtP, err = utils.GetSqrtRatioAtTick(tempNextTick)
 		if err != nil {
-			return nil, nil, nil, nil, 0, err
+			return nil, nil, nil, nil, 0, 0, err
 		}
 
-		if step.tickNext < utils.MinTick {
-			step.tickNext = utils.MinTick
-		} else if step.tickNext > utils.MaxTick {
-			step.tickNext = utils.MaxTick
+		targetSqrtP := swapData.nextSqrtP
+		// ensure next sqrtP (and its corresponding tick) does not exceed price limit
+		if willUpTick == (swapData.nextSqrtP.Cmp(limitSqrtP) > 0) {
+			targetSqrtP = limitSqrtP
 		}
 
-		step.nextSqrtP, err = utils.GetSqrtRatioAtTick(step.tickNext)
-		if err != nil {
-			return nil, nil, nil, nil, 0, err
-		}
-		var targetValue *big.Int
-		if isToken0 {
-			if step.nextSqrtP.Cmp(sqrtPriceLimitX96) < 0 {
-				targetValue = sqrtPriceLimitX96
-			} else {
-				targetValue = step.nextSqrtP
-			}
-		} else {
-			if step.nextSqrtP.Cmp(sqrtPriceLimitX96) > 0 {
-				targetValue = sqrtPriceLimitX96
-			} else {
-				targetValue = step.nextSqrtP
-			}
-		}
-
-		step.usedAmount, step.returnedAmount, step.deltaL, state.sqrtP, err = utils.ComputeSwapStep(
-			new(big.Int).Add(state.liquidity, state.reinvestL),
-			state.sqrtP,
-			targetValue,
+		var usedAmount, returnedAmount, deltaL *big.Int
+		usedAmount, returnedAmount, deltaL, swapData.sqrtP, err = utils.ComputeSwapStep(
+			new(big.Int).Add(swapData.baseL, swapData.reinvestL),
+			swapData.sqrtP,
+			targetSqrtP,
 			p.Fee,
-			state.specifiedAmount,
-			isExactInput,
+			swapData.specifiedAmount,
+			swapData.isExactInput,
 			isToken0,
 		)
 		if err != nil {
-			return nil, nil, nil, nil, 0, err
+			return nil, nil, nil, nil, 0, 0, err
 		}
 
-		state.specifiedAmount = new(big.Int).Sub(state.specifiedAmount, step.usedAmount)
-		state.returnedAmount = new(big.Int).Add(state.returnedAmount, step.returnedAmount)
-		state.reinvestL = new(big.Int).Add(state.reinvestL, step.deltaL)
+		swapData.specifiedAmount = new(big.Int).Sub(swapData.specifiedAmount, usedAmount)
+		swapData.returnedAmount = new(big.Int).Add(swapData.returnedAmount, returnedAmount)
+		swapData.reinvestL = new(big.Int).Add(swapData.reinvestL, deltaL)
 
-		// TODO
-		if state.sqrtP.Cmp(step.nextSqrtP) == 0 {
-			// if the tick is initialized, run the tick transition
-			if step.initialized {
-				tick, err := p.TickDataProvider.GetTick(step.tickNext)
+		if swapData.sqrtP.Cmp(swapData.nextSqrtP) != 0 {
+			if swapData.sqrtP != swapData.startSqrtP {
+				swapData.currentTick, err = utils.GetTickAtSqrtRatio(swapData.sqrtP)
 				if err != nil {
-					return nil, nil, nil, nil, 0, err
+					return nil, nil, nil, nil, 0, 0, err
 				}
-
-				liquidityNet := tick.LiquidityNet
-				// if we're moving leftward, we interpret liquidityNet as the opposite sign
-				// safe because liquidityNet cannot be type(int128).min
-				if isToken0 {
-					liquidityNet = new(big.Int).Mul(liquidityNet, constants.NegativeOne)
-				}
-				state.liquidity = utils.AddDelta(state.liquidity, liquidityNet)
 			}
-			if isToken0 {
-				state.tick = step.tickNext - 1
-			} else {
-				state.tick = step.tickNext
-			}
-		} else {
-			// recompute unless we're on a lower tick boundary (i.e. already transitioned ticks), and haven't moved
-			state.tick, err = utils.GetTickAtSqrtRatio(state.sqrtP)
-			if err != nil {
-				return nil, nil, nil, nil, 0, err
-			}
+			break
 		}
+
+		if willUpTick {
+			swapData.currentTick = tempNextTick
+
+		} else {
+			swapData.currentTick = tempNextTick - 1
+		}
+
+		// if tempNextTick is not next initialized tick
+		if tempNextTick != swapData.nextTick {
+			continue
+		}
+
+		swapData.baseL, swapData.nextTick = p._updateLiquidityAndCrossTick(
+			swapData.nextTick,
+			swapData.baseL,
+			willUpTick,
+		)
 	}
-	return state.returnedAmount, state.sqrtP, state.liquidity, state.reinvestL, state.tick, nil
+
+	return swapData.returnedAmount, swapData.baseL, swapData.reinvestL, swapData.sqrtP, swapData.currentTick, swapData.nextTick, nil
+}
+
+// Source: https://github.com/KyberNetwork/ks-elastic-sc-v2/blob/3ba84353cbd88f30f222bb9c673e242a2e46fd12/contracts/PoolTicksState.sol#L78-L103
+func (p *Pool) _updateLiquidityAndCrossTick(
+	nextTick int,
+	currentLiquidity *big.Int,
+	willUpTick bool,
+) (newLiquidity *big.Int, newNextTick int) {
+	liquidityNet := p.Ticks[nextTick].LiquidityNet
+
+	if willUpTick {
+		newNextTick = p.InitializedTicks[nextTick].Next
+	} else {
+		newNextTick = p.InitializedTicks[nextTick].Previous
+		liquidityNet = new(big.Int).Mul(liquidityNet, constants.NegativeOne)
+	}
+
+	var liquidityDelta *big.Int
+	if liquidityNet.Cmp(constants.Zero) >= 0 {
+		liquidityDelta = liquidityNet
+	} else {
+		liquidityDelta = new(big.Int).Mul(liquidityNet, constants.NegativeOne)
+	}
+
+	newLiquidity = utils.ApplyLiquidityDelta(currentLiquidity, liquidityDelta, liquidityNet.Cmp(constants.Zero) >= 0)
+
+	return newLiquidity, newNextTick
+}
+
+// In the contract, this function will mutate the pool state directly
+// but in this SDK, we will return a new pool state instead
+// because CalcAmountOut is not allowed to mutate state
+// instead, we will return the new state to use in the UpdateBalance function
+// Source: https://github.com/KyberNetwork/ks-elastic-sc-v2/blob/3ba84353cbd88f30f222bb9c673e242a2e46fd12/contracts/PoolTicksState.sol#L105-L119
+func (p *Pool) _updatePoolData(
+	baseL *big.Int,
+	reinvestL *big.Int,
+	sqrtP *big.Int,
+	currentTick int,
+	nextTick int,
+) *Pool {
+	var newPoolState Pool
+
+	newPoolState.BaseL = baseL
+	newPoolState.ReinvestL = reinvestL
+	newPoolState.SqrtP = sqrtP
+	newPoolState.CurrentTick = currentTick
+	if nextTick > currentTick {
+		newPoolState.NearestCurrentTick = p.InitializedTicks[nextTick].Previous
+	} else {
+		newPoolState.NearestCurrentTick = nextTick
+	}
+
+	return &newPoolState
 }
 
 func (p *Pool) tickSpacing() int {
