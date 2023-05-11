@@ -1,15 +1,15 @@
-# ProMM SDK Go
+# Elastic Go SDK
 
-[![API Reference](https://camo.githubusercontent.com/915b7be44ada53c290eb157634330494ebe3e30a/68747470733a2f2f676f646f632e6f72672f6769746875622e636f6d2f676f6c616e672f6764646f3f7374617475732e737667)](https://pkg.go.dev/github.com/KyberNetwork/promm-sdk-go)
-[![Test](https://github.com/KyberNetwork/promm-sdk-go/actions/workflows/test.yml/badge.svg)](https://github.com/KyberNetwork/promm-sdk-go/actions/workflows/test.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/KyberNetwork/promm-sdk-go)](https://goreportcard.com/report/github.com/KyberNetwork/promm-sdk-go)
+[![API Reference](https://camo.githubusercontent.com/915b7be44ada53c290eb157634330494ebe3e30a/68747470733a2f2f676f646f632e6f72672f6769746875622e636f6d2f676f6c616e672f6764646f3f7374617475732e737667)](https://pkg.go.dev/github.com/KyberNetwork/elastic-go-sdk)
+[![Test](https://github.com/KyberNetwork/elastic-go-sdk/actions/workflows/test.yml/badge.svg)](https://github.com/KyberNetwork/elastic-go-sdk/actions/workflows/test.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/KyberNetwork/elastic-go-sdk)](https://goreportcard.com/report/github.com/KyberNetwork/elastic-go-sdk)
 
-🛠 A Go SDK for building applications on top of ProMM
+🛠 A Go SDK for building applications on top of Elastic
 
 ## Installation
 
 ```sh
-go get github.com/KyberNetwork/promm-sdk-go
+go get github.com/KyberNetwork/elastic-go-sdk
 ```
 
 ## Usage
@@ -24,9 +24,9 @@ import (
 	"math/big"
 
 	core "github.com/KyberNetwork/uniswap-sdk-core/entities"
-	"github.com/KyberNetwork/promm-sdk-go/constants"
-	"github.com/KyberNetwork/promm-sdk-go/entities"
-	"github.com/KyberNetwork/promm-sdk-go/utils"
+	"github.com/KyberNetwork/elastic-go-sdk/constants"
+	"github.com/KyberNetwork/elastic-go-sdk/entities"
+	"github.com/KyberNetwork/elastic-go-sdk/utils"
 	"github.com/ethereum/go-ethereum/common"
 )
 
