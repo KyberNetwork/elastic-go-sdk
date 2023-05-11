@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/KyberNetwork/promm-sdk-go/utils"
+	"github.com/KyberNetwork/elastic-go-sdk/utils"
 )
 
 var (

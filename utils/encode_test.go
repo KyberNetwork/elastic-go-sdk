@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/KyberNetwork/promm-sdk-go/constants"
+	"github.com/KyberNetwork/elastic-go-sdk/constants"
 )
 
 func TestEncodeSqrtRatioX96(t *testing.T) {

@@ -1,10 +1,8 @@
-module github.com/KyberNetwork/promm-sdk-go
+module github.com/KyberNetwork/elastic-go-sdk
 
-go 1.17
+go 1.20
 
-replace (
-  github.com/daoleno/uniswap-sdk-core v0.1.5 => github.com/KyberNetwork/uniswap-sdk-core v0.1.5
-)
+replace github.com/daoleno/uniswap-sdk-core v0.1.5 => github.com/KyberNetwork/uniswap-sdk-core v0.1.5
 
 require (
 	github.com/daoleno/uniswap-sdk-core v0.1.5

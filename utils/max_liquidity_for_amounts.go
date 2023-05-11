@@ -3,7 +3,7 @@ package utils
 import (
 	"math/big"
 
-	"github.com/KyberNetwork/promm-sdk-go/constants"
+	"github.com/KyberNetwork/elastic-go-sdk/constants"
 )
 
 /**

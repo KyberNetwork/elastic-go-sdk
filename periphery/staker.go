@@ -4,11 +4,12 @@ import (
 	_ "embed"
 	"math/big"
 
-	"github.com/KyberNetwork/promm-sdk-go/entities"
-	"github.com/KyberNetwork/promm-sdk-go/utils"
 	core "github.com/daoleno/uniswap-sdk-core/entities"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/KyberNetwork/elastic-go-sdk/entities"
+	"github.com/KyberNetwork/elastic-go-sdk/utils"
 )
 
 const INCENTIVE_KEY_ABI = "tuple(address rewardToken, address pool, uint256 startTime, uint256 endTime, address refundee)"

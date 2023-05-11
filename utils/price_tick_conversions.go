@@ -5,7 +5,7 @@ import (
 
 	"github.com/daoleno/uniswap-sdk-core/entities"
 
-	"github.com/KyberNetwork/promm-sdk-go/constants"
+	"github.com/KyberNetwork/elastic-go-sdk/constants"
 )
 
 /**

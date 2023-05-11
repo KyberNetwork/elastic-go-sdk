@@ -7,10 +7,11 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/KyberNetwork/promm-sdk-go/entities"
-	"github.com/KyberNetwork/promm-sdk-go/utils"
 	core "github.com/daoleno/uniswap-sdk-core/entities"
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/KyberNetwork/elastic-go-sdk/entities"
+	"github.com/KyberNetwork/elastic-go-sdk/utils"
 )
 
 //go:embed contracts/lens/Quoter.sol/Quoter.json

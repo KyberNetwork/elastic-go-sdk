@@ -3,7 +3,7 @@ package entities
 import (
 	"math"
 
-	"github.com/KyberNetwork/promm-sdk-go/utils"
+	"github.com/KyberNetwork/elastic-go-sdk/utils"
 )
 
 /**

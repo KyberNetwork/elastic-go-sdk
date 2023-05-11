@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/KyberNetwork/promm-sdk-go/constants"
+	"github.com/KyberNetwork/elastic-go-sdk/constants"
 )
 
 /**

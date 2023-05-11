@@ -8,8 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/KyberNetwork/promm-sdk-go/constants"
-	"github.com/KyberNetwork/promm-sdk-go/utils"
+	"github.com/KyberNetwork/elastic-go-sdk/constants"
+	"github.com/KyberNetwork/elastic-go-sdk/utils"
 )
 
 var (
