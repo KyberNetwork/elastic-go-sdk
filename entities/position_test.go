@@ -9,8 +9,8 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/KyberNetwork/elastic-go-sdk/constants"
-	"github.com/KyberNetwork/elastic-go-sdk/utils"
+	"github.com/KyberNetwork/elastic-go-sdk/v2/constants"
+	"github.com/KyberNetwork/elastic-go-sdk/v2/utils"
 )
 
 var (

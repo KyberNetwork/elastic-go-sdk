@@ -6,8 +6,8 @@ import (
 
 	"github.com/daoleno/uniswap-sdk-core/entities"
 
-	"github.com/KyberNetwork/elastic-go-sdk/constants"
-	"github.com/KyberNetwork/elastic-go-sdk/utils"
+	"github.com/KyberNetwork/elastic-go-sdk/v2/constants"
+	"github.com/KyberNetwork/elastic-go-sdk/v2/utils"
 )
 
 var (
