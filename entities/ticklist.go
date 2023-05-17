@@ -4,11 +4,13 @@ import (
 	"errors"
 	"math"
 	"math/big"
+
+	"github.com/KyberNetwork/elastic-go-sdk/utils"
 )
 
 const (
-	ZeroValueTickIndex       = 0
-	ZeroValueTickInitialized = false
+	TickIndexZero      = 0
+	TickNotInitialized = false
 )
 
 var (
@@ -148,16 +150,16 @@ func NextInitializedTickWithinOneWord(ticks []Tick, tick int, lte bool, tickSpac
 		minimum := (wordPos << 8) * tickSpacing
 		isBelowSmallest, err := IsBelowSmallest(ticks, tick)
 		if err != nil {
-			return ZeroValueTickIndex, ZeroValueTickInitialized, err
+			return TickIndexZero, TickNotInitialized, err
 		}
 
 		if isBelowSmallest {
-			return minimum, ZeroValueTickInitialized, ErrBelowSmallest
+			return minimum, TickNotInitialized, ErrBelowSmallest
 		}
 
 		nextInitializedTick, err := NextInitializedTick(ticks, tick, lte)
 		if err != nil {
-			return ZeroValueTickIndex, ZeroValueTickInitialized, err
+			return TickIndexZero, TickNotInitialized, err
 		}
 
 		index := nextInitializedTick.Index
@@ -168,16 +170,16 @@ func NextInitializedTickWithinOneWord(ticks []Tick, tick int, lte bool, tickSpac
 		maximum := ((wordPos+1)<<8)*tickSpacing - 1
 		isAtOrAboveLargest, err := IsAtOrAboveLargest(ticks, tick)
 		if err != nil {
-			return ZeroValueTickIndex, ZeroValueTickInitialized, err
+			return TickIndexZero, TickNotInitialized, err
 		}
 
 		if isAtOrAboveLargest {
-			return maximum, ZeroValueTickInitialized, ErrAtOrAboveLargest
+			return maximum, TickNotInitialized, ErrAtOrAboveLargest
 		}
 
 		nextInitializedTick, err := NextInitializedTick(ticks, tick, lte)
 		if err != nil {
-			return ZeroValueTickIndex, ZeroValueTickInitialized, err
+			return TickIndexZero, TickNotInitialized, err
 		}
 
 		index := nextInitializedTick.Index
@@ -186,50 +188,49 @@ func NextInitializedTickWithinOneWord(ticks []Tick, tick int, lte bool, tickSpac
 	}
 }
 
-func NextInitializedTickWithinFixedDistance(ticks []Tick, tick int, lte bool, distance int) (int, bool, error) {
-	if lte {
-		minimum := tick - distance
-
-		isBelowSmallest, err := IsBelowSmallest(ticks, tick)
-		if err != nil {
-			return ZeroValueTickIndex, ZeroValueTickInitialized, err
-		}
-
-		if isBelowSmallest {
-			return minimum, ZeroValueTickInitialized, ErrBelowSmallest
-		}
-
-		nextInitializedTick, err := NextInitializedTick(ticks, tick, lte)
-		if err != nil {
-			return ZeroValueTickIndex, ZeroValueTickInitialized, err
-		}
-
-		index := nextInitializedTick.Index
-		nextInitializedTickIndex := math.Max(float64(minimum), float64(index))
-
-		return int(nextInitializedTickIndex), int(nextInitializedTickIndex) == index, nil
-	} else {
-		maximum := tick + distance
-
-		isAtOrAboveLargest, err := IsAtOrAboveLargest(ticks, tick)
-		if err != nil {
-			return ZeroValueTickIndex, ZeroValueTickInitialized, err
-		}
-
-		if isAtOrAboveLargest {
-			return maximum, ZeroValueTickInitialized, ErrAtOrAboveLargest
-		}
-
-		nextInitializedTick, err := NextInitializedTick(ticks, tick, lte)
-		if err != nil {
-			return ZeroValueTickIndex, ZeroValueTickInitialized, err
-		}
-
-		index := nextInitializedTick.Index
-		nextInitializedTickIndex := math.Min(float64(maximum), float64(index))
-
-		return int(nextInitializedTickIndex), int(nextInitializedTickIndex) == index, nil
+func GetNearestCurrentTick(ticks []Tick, currentTick int) (int, error) {
+	tick, err := NextInitializedTick(ticks, currentTick, true)
+	if err != nil {
+		return TickIndexZero, err
 	}
+
+	return tick.Index, nil
+}
+
+func TransformToMap(ticks []Tick) (map[int]TickData, map[int]LinkedListData) {
+	tickDataByIndex := make(map[int]TickData)
+	initializedTicks := make(map[int]LinkedListData)
+
+	for i, t := range ticks {
+		tickDataByIndex[t.Index] = TickData{
+			LiquidityGross: t.LiquidityGross,
+			LiquidityNet:   t.LiquidityNet,
+		}
+
+		if len(ticks) == 1 {
+			initializedTicks[t.Index] = LinkedListData{
+				Next:     utils.MaxTick,
+				Previous: utils.MinTick,
+			}
+		} else if i == 0 {
+			initializedTicks[t.Index] = LinkedListData{
+				Next:     ticks[i+1].Index,
+				Previous: utils.MinTick,
+			}
+		} else if i == len(ticks)-1 {
+			initializedTicks[t.Index] = LinkedListData{
+				Next:     utils.MaxTick,
+				Previous: ticks[i-1].Index,
+			}
+		} else {
+			initializedTicks[t.Index] = LinkedListData{
+				Next:     ticks[i+1].Index,
+				Previous: ticks[i-1].Index,
+			}
+		}
+	}
+
+	return tickDataByIndex, initializedTicks
 }
 
 // utils
@@ -252,11 +253,11 @@ func isTicksSorted(ticks []Tick) bool {
 func binarySearch(ticks []Tick, tick int) (int, error) {
 	isBelowSmallest, err := IsBelowSmallest(ticks, tick)
 	if err != nil {
-		return ZeroValueTickIndex, err
+		return TickIndexZero, err
 	}
 
 	if isBelowSmallest {
-		return ZeroValueTickIndex, ErrBelowSmallest
+		return TickIndexZero, ErrBelowSmallest
 	}
 
 	// binary search

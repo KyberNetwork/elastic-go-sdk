@@ -144,7 +144,7 @@ type DecreaseLiquidityParams struct {
 
 func encodeCreate(pool *entities.Pool) ([]byte, error) {
 	abi := getNonFungiblePositionManagerABI()
-	return abi.Pack("createAndInitializePoolIfNecessary", pool.Token0.Address, pool.Token1.Address, big.NewInt(int64(pool.Fee)), pool.SqrtRatioX96)
+	return abi.Pack("createAndInitializePoolIfNecessary", pool.Token0.Address, pool.Token1.Address, big.NewInt(int64(pool.Fee)), pool.SqrtP)
 }
 
 func CreateCallParameters(pool *entities.Pool) (*utils.MethodParameters, error) {

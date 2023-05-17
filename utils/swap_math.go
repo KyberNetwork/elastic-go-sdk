@@ -6,6 +6,8 @@ import (
 	"github.com/KyberNetwork/elastic-go-sdk/constants"
 )
 
+// Source: https://github.com/KyberNetwork/ks-elastic-sc-v2/blob/3ba84353cbd88f30f222bb9c673e242a2e46fd12/contracts/libraries/SwapMath.sol
+
 var FeeUnits = new(big.Int).Exp(big.NewInt(10), big.NewInt(5), nil)
 var TwoFeeUnits = new(big.Int).Mul(FeeUnits, big.NewInt(2))
 
