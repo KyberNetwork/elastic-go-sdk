@@ -5,7 +5,7 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/KyberNetwork/elastic-go-sdk/utils"
+	"github.com/KyberNetwork/elastic-go-sdk/v2/utils"
 )
 
 const (

@@ -1,4 +1,4 @@
-module github.com/KyberNetwork/elastic-go-sdk
+module github.com/KyberNetwork/elastic-go-sdk/v2
 
 go 1.20
 

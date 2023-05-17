@@ -8,8 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/KyberNetwork/elastic-go-sdk/entities"
-	"github.com/KyberNetwork/elastic-go-sdk/utils"
+	"github.com/KyberNetwork/elastic-go-sdk/v2/entities"
+	"github.com/KyberNetwork/elastic-go-sdk/v2/utils"
 )
 
 const INCENTIVE_KEY_ABI = "tuple(address rewardToken, address pool, uint256 startTime, uint256 endTime, address refundee)"

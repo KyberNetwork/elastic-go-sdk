@@ -3,7 +3,7 @@ package utils
 import (
 	"math/big"
 
-	"github.com/KyberNetwork/elastic-go-sdk/constants"
+	"github.com/KyberNetwork/elastic-go-sdk/v2/constants"
 )
 
 // Source: https://github.com/KyberNetwork/ks-elastic-sc-v2/blob/3ba84353cbd88f30f222bb9c673e242a2e46fd12/contracts/libraries/SwapMath.sol

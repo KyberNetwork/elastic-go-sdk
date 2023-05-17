@@ -10,9 +10,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/KyberNetwork/elastic-go-sdk/constants"
-	"github.com/KyberNetwork/elastic-go-sdk/entities"
-	"github.com/KyberNetwork/elastic-go-sdk/utils"
+	"github.com/KyberNetwork/elastic-go-sdk/v2/constants"
+	"github.com/KyberNetwork/elastic-go-sdk/v2/entities"
+	"github.com/KyberNetwork/elastic-go-sdk/v2/utils"
 )
 
 //go:embed contracts/interfaces/INonfungiblePositionManager.sol/INonfungiblePositionManager.json
