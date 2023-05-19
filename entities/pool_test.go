@@ -808,11 +808,11 @@ func TestPool_GetOutputAmount(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			outputAmount, _, err := tt.pool.GetOutputAmount(tt.args.inputAmount, tt.args.sqrtPriceLimitX96)
+			result, err := tt.pool.GetOutputAmount(tt.args.inputAmount, tt.args.sqrtPriceLimitX96)
 
 			assert.ErrorIs(t, err, tt.expectErr)
-			assert.True(t, outputAmount.Currency.Equal(tt.expectCurrencyOut))
-			assert.Equal(t, tt.expectOutputAmount, outputAmount.Quotient())
+			assert.True(t, result.ReturnedAmount.Currency.Equal(tt.expectCurrencyOut))
+			assert.Equal(t, tt.expectOutputAmount, result.ReturnedAmount.Quotient())
 		})
 	}
 }
@@ -822,19 +822,19 @@ func TestGetInputAmount(t *testing.T) {
 
 	// USDC -> DAI
 	outputAmount := entities.FromRawAmount(DAI, big.NewInt(98))
-	inputAmount, _, err := pool.GetInputAmount(outputAmount, nil)
+	result, err := pool.GetInputAmount(outputAmount, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.True(t, inputAmount.Currency.Equal(USDC))
-	assert.Equal(t, inputAmount.Quotient(), big.NewInt(98))
+	assert.True(t, result.ReturnedAmount.Currency.Equal(USDC))
+	assert.Equal(t, result.ReturnedAmount.Quotient(), big.NewInt(98))
 
 	// DAI -> USDC
 	outputAmount = entities.FromRawAmount(USDC, big.NewInt(98))
-	inputAmount, _, err = pool.GetInputAmount(outputAmount, nil)
+	result, err = pool.GetInputAmount(outputAmount, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.True(t, inputAmount.Currency.Equal(DAI))
-	assert.Equal(t, inputAmount.Quotient(), big.NewInt(98))
+	assert.True(t, result.ReturnedAmount.Currency.Equal(DAI))
+	assert.Equal(t, result.ReturnedAmount.Quotient(), big.NewInt(98))
 }
