@@ -36,6 +36,24 @@ type SwapData struct {
 	startSqrtP      *big.Int // the start sqrt price before each iteration
 }
 
+type SwapResult struct {
+	returnedAmount    *big.Int
+	baseL             *big.Int
+	reinvestL         *big.Int
+	sqrtP             *big.Int
+	currentTick       int
+	nextTick          int
+	crossTickLoops    int
+	nonCrossTickLoops int
+}
+
+type GetAmountResult struct {
+	ReturnedAmount    *entities.CurrencyAmount
+	NewPoolState      *Pool
+	CrossTickLoops    int
+	NonCrossTickLoops int
+}
+
 // Represents a V3 pool
 type Pool struct {
 	Token0             *entities.Token
@@ -195,20 +213,18 @@ func (p *Pool) ChainID() uint {
  * @param sqrtPriceLimitX96 The Q64.96 sqrt price limit
  * @returns The output amount and the pool with updated state
  */
-func (p *Pool) GetOutputAmount(
-	inputAmount *entities.CurrencyAmount, limitSqrtP *big.Int,
-) (*entities.CurrencyAmount, *Pool, error) {
+func (p *Pool) GetOutputAmount(inputAmount *entities.CurrencyAmount, limitSqrtP *big.Int) (*GetAmountResult, error) {
 	if !(inputAmount.Currency.IsToken() && p.InvolvesToken(inputAmount.Currency.Wrapped())) {
-		return nil, nil, ErrTokenNotInvolved
+		return nil, ErrTokenNotInvolved
 	}
 	zeroForOne := inputAmount.Currency.Equal(p.Token0)
-	returnedAmount, baseL, reinvestL, sqrtP, currentTick, nextTick, err := p.swap(
+	swapResult, err := p.swap(
 		zeroForOne,
 		inputAmount.Quotient(),
 		limitSqrtP,
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	var outputToken *entities.Token
@@ -218,9 +234,20 @@ func (p *Pool) GetOutputAmount(
 		outputToken = p.Token0
 	}
 
-	newPoolState := p._updatePoolData(baseL, reinvestL, sqrtP, currentTick, nextTick)
+	newPoolState := p._updatePoolData(
+		swapResult.baseL,
+		swapResult.reinvestL,
+		swapResult.sqrtP,
+		swapResult.currentTick,
+		swapResult.nextTick,
+	)
 
-	return entities.FromRawAmount(outputToken, new(big.Int).Mul(returnedAmount, constants.NegativeOne)), newPoolState, nil
+	return &GetAmountResult{
+		ReturnedAmount:    entities.FromRawAmount(outputToken, new(big.Int).Mul(swapResult.returnedAmount, constants.NegativeOne)),
+		NewPoolState:      newPoolState,
+		CrossTickLoops:    swapResult.crossTickLoops,
+		NonCrossTickLoops: swapResult.nonCrossTickLoops,
+	}, nil
 }
 
 /**
@@ -229,20 +256,18 @@ func (p *Pool) GetOutputAmount(
  * @param sqrtPriceLimitX96 The Q64.96 sqrt price limit. If zero for one, the price cannot be less than this value after the swap. If one for zero, the price cannot be greater than this value after the swap
  * @returns The input amount and the pool with updated state
  */
-func (p *Pool) GetInputAmount(
-	outputAmount *entities.CurrencyAmount, limitSqrtP *big.Int,
-) (*entities.CurrencyAmount, *Pool, error) {
+func (p *Pool) GetInputAmount(outputAmount *entities.CurrencyAmount, limitSqrtP *big.Int) (*GetAmountResult, error) {
 	if !(outputAmount.Currency.IsToken() && p.InvolvesToken(outputAmount.Currency.Wrapped())) {
-		return nil, nil, ErrTokenNotInvolved
+		return nil, ErrTokenNotInvolved
 	}
 	zeroForOne := outputAmount.Currency.Equal(p.Token1)
-	returnedAmount, baseL, reinvestL, sqrtP, currentTick, nextTick, err := p.swap(
+	swapResult, err := p.swap(
 		zeroForOne,
 		new(big.Int).Mul(outputAmount.Quotient(), constants.NegativeOne),
 		limitSqrtP,
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	var inputToken *entities.Token
@@ -252,9 +277,20 @@ func (p *Pool) GetInputAmount(
 		inputToken = p.Token1
 	}
 
-	newPoolState := p._updatePoolData(baseL, reinvestL, sqrtP, currentTick, nextTick)
+	newPoolState := p._updatePoolData(
+		swapResult.baseL,
+		swapResult.reinvestL,
+		swapResult.sqrtP,
+		swapResult.currentTick,
+		swapResult.nextTick,
+	)
 
-	return entities.FromRawAmount(inputToken, returnedAmount), newPoolState, nil
+	return &GetAmountResult{
+		ReturnedAmount:    entities.FromRawAmount(inputToken, swapResult.returnedAmount),
+		NewPoolState:      newPoolState,
+		CrossTickLoops:    swapResult.crossTickLoops,
+		NonCrossTickLoops: swapResult.nonCrossTickLoops,
+	}, nil
 }
 
 // Source: https://github.com/KyberNetwork/ks-elastic-sc-v2/blob/3ba84353cbd88f30f222bb9c673e242a2e46fd12/contracts/PoolTicksState.sol#L121-L147C4
@@ -287,9 +323,7 @@ func (p *Pool) _getInitialSwapData(willUpTick bool) (
  * @returns liquidity
  * @returns tickCurrent
  */
-func (p *Pool) swap(isToken0 bool, swapQty *big.Int, limitSqrtP *big.Int) (
-	*big.Int, *big.Int, *big.Int, *big.Int, int, int, error,
-) {
+func (p *Pool) swap(isToken0 bool, swapQty *big.Int, limitSqrtP *big.Int) (*SwapResult, error) {
 	var swapData SwapData
 	swapData.specifiedAmount = swapQty
 	swapData.isToken0 = isToken0
@@ -315,15 +349,20 @@ func (p *Pool) swap(isToken0 bool, swapQty *big.Int, limitSqrtP *big.Int) (
 
 	if willUpTick {
 		if limitSqrtP.Cmp(p.SqrtP) < 0 || limitSqrtP.Cmp(utils.MaxSqrtRatio) > 0 {
-			return nil, nil, nil, nil, 0, 0, ErrBadLimitSqrtP
+			return nil, ErrBadLimitSqrtP
 		}
 	} else {
 		if limitSqrtP.Cmp(p.SqrtP) > 0 || limitSqrtP.Cmp(utils.MinSqrtRatio) < 0 {
-			return nil, nil, nil, nil, 0, 0, ErrBadLimitSqrtP
+			return nil, ErrBadLimitSqrtP
 		}
 	}
 
 	var err error
+
+	// crossTickLoops is the number of loops that cross the current tick
+	crossTickLoops := 0
+	// nonCrossTickLoops is the number of loops that don't cross the current tick
+	nonCrossTickLoops := 0
 
 	// continue swapping while specified input/output isn't satisfied or price limit not reached
 	for swapData.specifiedAmount.Cmp(constants.Zero) != 0 && swapData.sqrtP.Cmp(limitSqrtP) != 0 {
@@ -341,7 +380,7 @@ func (p *Pool) swap(isToken0 bool, swapQty *big.Int, limitSqrtP *big.Int) (
 		swapData.startSqrtP = swapData.sqrtP
 		swapData.nextSqrtP, err = utils.GetSqrtRatioAtTick(tempNextTick)
 		if err != nil {
-			return nil, nil, nil, nil, 0, 0, err
+			return nil, err
 		}
 
 		targetSqrtP := swapData.nextSqrtP
@@ -361,7 +400,7 @@ func (p *Pool) swap(isToken0 bool, swapQty *big.Int, limitSqrtP *big.Int) (
 			isToken0,
 		)
 		if err != nil {
-			return nil, nil, nil, nil, 0, 0, err
+			return nil, err
 		}
 
 		swapData.specifiedAmount = new(big.Int).Sub(swapData.specifiedAmount, usedAmount)
@@ -372,7 +411,7 @@ func (p *Pool) swap(isToken0 bool, swapQty *big.Int, limitSqrtP *big.Int) (
 			if swapData.sqrtP != swapData.startSqrtP {
 				swapData.currentTick, err = utils.GetTickAtSqrtRatio(swapData.sqrtP)
 				if err != nil {
-					return nil, nil, nil, nil, 0, 0, err
+					return nil, err
 				}
 			}
 			break
@@ -387,6 +426,7 @@ func (p *Pool) swap(isToken0 bool, swapQty *big.Int, limitSqrtP *big.Int) (
 
 		// if tempNextTick is not next initialized tick
 		if tempNextTick != swapData.nextTick {
+			nonCrossTickLoops++
 			continue
 		}
 
@@ -395,9 +435,20 @@ func (p *Pool) swap(isToken0 bool, swapQty *big.Int, limitSqrtP *big.Int) (
 			swapData.baseL,
 			willUpTick,
 		)
+
+		crossTickLoops++
 	}
 
-	return swapData.returnedAmount, swapData.baseL, swapData.reinvestL, swapData.sqrtP, swapData.currentTick, swapData.nextTick, nil
+	return &SwapResult{
+		returnedAmount:    swapData.returnedAmount,
+		baseL:             swapData.baseL,
+		reinvestL:         swapData.reinvestL,
+		sqrtP:             swapData.sqrtP,
+		currentTick:       swapData.currentTick,
+		nextTick:          swapData.nextTick,
+		crossTickLoops:    crossTickLoops,
+		nonCrossTickLoops: nonCrossTickLoops,
+	}, nil
 }
 
 // Source: https://github.com/KyberNetwork/ks-elastic-sc-v2/blob/3ba84353cbd88f30f222bb9c673e242a2e46fd12/contracts/PoolTicksState.sol#L78-L103
