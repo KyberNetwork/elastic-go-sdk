@@ -189,6 +189,15 @@ func NextInitializedTickWithinOneWord(ticks []Tick, tick int, lte bool, tickSpac
 }
 
 func GetNearestCurrentTick(ticks []Tick, currentTick int) (int, error) {
+	isBelowSmallest, err := IsBelowSmallest(ticks, currentTick)
+	if err != nil {
+		return utils.MinTick, err
+	}
+
+	if isBelowSmallest {
+		return utils.MinTick, nil
+	}
+
 	tick, err := NextInitializedTick(ticks, currentTick, true)
 	if err != nil {
 		return TickIndexZero, err
