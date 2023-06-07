@@ -415,6 +415,10 @@ func (p *Pool) _updateLiquidityAndCrossTick(
 		liquidityNet = new(big.Int).Mul(liquidityNet, constants.NegativeOne)
 	}
 
+	if liquidityNet == nil {
+		return constants.Zero, newNextTick
+	}
+
 	var liquidityDelta *big.Int
 	if liquidityNet.Cmp(constants.Zero) >= 0 {
 		liquidityDelta = liquidityNet

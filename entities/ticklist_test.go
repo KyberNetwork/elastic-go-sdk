@@ -177,3 +177,176 @@ func TestGetNearestCurrentTick(t *testing.T) {
 		})
 	}
 }
+
+func TestTransformToMap(t *testing.T) {
+	type args struct {
+		ticks []Tick
+	}
+	tests := []struct {
+		name               string
+		args               args
+		wantTickData       map[int]TickData
+		wantLinkedListData map[int]LinkedListData
+	}{
+		{
+			name: "it should return correct data when there is no initialized tick",
+			args: args{
+				ticks: []Tick{},
+			},
+			wantTickData: map[int]TickData{},
+			wantLinkedListData: map[int]LinkedListData{
+				utils.MinTick: {
+					Previous: utils.MinTick,
+					Next:     utils.MaxTick,
+				},
+				utils.MaxTick: {
+					Previous: utils.MinTick,
+					Next:     utils.MaxTick,
+				},
+			},
+		},
+		{
+			name: "it should return correct data when there is only 1 initialized tick",
+			args: args{
+				ticks: []Tick{
+					{
+						Index:          10000,
+						LiquidityNet:   big.NewInt(-100000),
+						LiquidityGross: big.NewInt(100000),
+					},
+				},
+			},
+			wantTickData: map[int]TickData{
+				10000: {
+					LiquidityNet:   big.NewInt(-100000),
+					LiquidityGross: big.NewInt(100000),
+				},
+			},
+			wantLinkedListData: map[int]LinkedListData{
+				utils.MinTick: {
+					Previous: utils.MinTick,
+					Next:     10000,
+				},
+				10000: {
+					Previous: utils.MinTick,
+					Next:     utils.MaxTick,
+				},
+				utils.MaxTick: {
+					Previous: 10000,
+					Next:     utils.MaxTick,
+				},
+			},
+		},
+		{
+			name: "it should return correct data when there are more than 1 initialized tick (2 ticks)",
+			args: args{
+				ticks: []Tick{
+					{
+						Index:          10000,
+						LiquidityNet:   big.NewInt(-100000),
+						LiquidityGross: big.NewInt(100000),
+					},
+					{
+						Index:          20000,
+						LiquidityNet:   big.NewInt(-200000),
+						LiquidityGross: big.NewInt(200000),
+					},
+				},
+			},
+			wantTickData: map[int]TickData{
+				10000: {
+					LiquidityNet:   big.NewInt(-100000),
+					LiquidityGross: big.NewInt(100000),
+				},
+				20000: {
+					LiquidityNet:   big.NewInt(-200000),
+					LiquidityGross: big.NewInt(200000),
+				},
+			},
+			wantLinkedListData: map[int]LinkedListData{
+				utils.MinTick: {
+					Previous: utils.MinTick,
+					Next:     10000,
+				},
+				10000: {
+					Previous: utils.MinTick,
+					Next:     20000,
+				},
+				20000: {
+					Previous: 10000,
+					Next:     utils.MaxTick,
+				},
+				utils.MaxTick: {
+					Previous: 20000,
+					Next:     utils.MaxTick,
+				},
+			},
+		},
+		{
+			name: "it should return correct data when there are more than 1 initialized tick (3 ticks)",
+			args: args{
+				ticks: []Tick{
+					{
+						Index:          10000,
+						LiquidityNet:   big.NewInt(-100000),
+						LiquidityGross: big.NewInt(100000),
+					},
+					{
+						Index:          20000,
+						LiquidityNet:   big.NewInt(-200000),
+						LiquidityGross: big.NewInt(200000),
+					},
+					{
+						Index:          30000,
+						LiquidityNet:   big.NewInt(-300000),
+						LiquidityGross: big.NewInt(300000),
+					},
+				},
+			},
+			wantTickData: map[int]TickData{
+				10000: {
+					LiquidityNet:   big.NewInt(-100000),
+					LiquidityGross: big.NewInt(100000),
+				},
+				20000: {
+					LiquidityNet:   big.NewInt(-200000),
+					LiquidityGross: big.NewInt(200000),
+				},
+				30000: {
+					LiquidityNet:   big.NewInt(-300000),
+					LiquidityGross: big.NewInt(300000),
+				},
+			},
+			wantLinkedListData: map[int]LinkedListData{
+				utils.MinTick: {
+					Previous: utils.MinTick,
+					Next:     10000,
+				},
+				10000: {
+					Previous: utils.MinTick,
+					Next:     20000,
+				},
+				20000: {
+					Previous: 10000,
+					Next:     30000,
+				},
+				30000: {
+					Previous: 20000,
+					Next:     utils.MaxTick,
+				},
+				utils.MaxTick: {
+					Previous: 30000,
+					Next:     utils.MaxTick,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotTickData, gotLinkedListData := TransformToMap(tt.args.ticks)
+			assert.Equalf(t, tt.wantTickData, gotTickData, "TransformToMap(%v)", tt.args.ticks)
+			assert.Equalf(t, tt.wantLinkedListData, gotLinkedListData, "TransformToMap(%v)", tt.args.ticks)
+		})
+	}
+}
