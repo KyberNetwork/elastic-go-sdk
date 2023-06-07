@@ -143,3 +143,37 @@ func TestNextInitializedTickWithinOneWord(t *testing.T) {
 	}
 
 }
+
+func TestGetNearestCurrentTick(t *testing.T) {
+	testCases := []struct {
+		name           string
+		ticks          []Tick
+		currenTick     int
+		expectedResult int
+		expectedError  error
+	}{
+		{
+			name:           "it should return minTicks with error when currentTick is min tick and ticks is empty",
+			ticks:          []Tick{},
+			currenTick:     utils.MinTick,
+			expectedResult: utils.MinTick,
+			expectedError:  ErrEmptyTickList,
+		},
+		{
+			name:           "it should return minTicks with no error when currentTick is min tick and ticks is not empty",
+			ticks:          []Tick{lowTick, midTick, highTick},
+			currenTick:     utils.MinTick,
+			expectedResult: utils.MinTick,
+			expectedError:  nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := GetNearestCurrentTick(tc.ticks, tc.currenTick)
+
+			assert.Equal(t, tc.expectedResult, result)
+			assert.ErrorIs(t, err, tc.expectedError)
+		})
+	}
+}
