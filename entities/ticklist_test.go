@@ -95,55 +95,6 @@ func TestNextInitializedTick(t *testing.T) {
 	assert.ErrorIs(t, err2, ErrAtOrAboveLargest)
 }
 
-func TestNextInitializedTickWithinOneWord(t *testing.T) {
-	ticks := []Tick{lowTick, midTick, highTick}
-
-	// words around 0, lte = true
-	type args struct {
-		ticks       []Tick
-		tick        int
-		lte         bool
-		tickSpacing int
-	}
-	tests := []struct {
-		name  string
-		args  args
-		want0 int
-		want1 bool
-	}{
-		// words around 0, lte = true
-		{name: "lte = true  0", args: args{ticks: ticks, tick: -257, lte: true, tickSpacing: 1}, want0: -512, want1: false},
-		{name: "lte = true  1", args: args{ticks: ticks, tick: -256, lte: true, tickSpacing: 1}, want0: -256, want1: false},
-		{name: "lte = true  2", args: args{ticks: ticks, tick: -1, lte: true, tickSpacing: 1}, want0: -256, want1: false},
-		{name: "lte = true  3", args: args{ticks: ticks, tick: 0, lte: true, tickSpacing: 1}, want0: 0, want1: true},
-		{name: "lte = true  4", args: args{ticks: ticks, tick: 1, lte: true, tickSpacing: 1}, want0: 0, want1: true},
-		{name: "lte = true  5", args: args{ticks: ticks, tick: 255, lte: true, tickSpacing: 1}, want0: 0, want1: true},
-		{name: "lte = true  6", args: args{ticks: ticks, tick: 256, lte: true, tickSpacing: 1}, want0: 256, want1: false},
-		{name: "lte = true  7", args: args{ticks: ticks, tick: 257, lte: true, tickSpacing: 1}, want0: 256, want1: false},
-
-		// words around 0, lte = false
-		{name: "lte = false 0", args: args{ticks: ticks, tick: -258, lte: false, tickSpacing: 1}, want0: -257, want1: false},
-		{name: "lte = false 1", args: args{ticks: ticks, tick: -257, lte: false, tickSpacing: 1}, want0: -1, want1: false},
-		{name: "lte = false 2", args: args{ticks: ticks, tick: -256, lte: false, tickSpacing: 1}, want0: -1, want1: false},
-		{name: "lte = false 3", args: args{ticks: ticks, tick: -2, lte: false, tickSpacing: 1}, want0: -1, want1: false},
-		{name: "lte = false 4", args: args{ticks: ticks, tick: -1, lte: false, tickSpacing: 1}, want0: 0, want1: true},
-		{name: "lte = false 5", args: args{ticks: ticks, tick: 0, lte: false, tickSpacing: 1}, want0: 255, want1: false},
-		{name: "lte = false 6", args: args{ticks: ticks, tick: 1, lte: false, tickSpacing: 1}, want0: 255, want1: false},
-		{name: "lte = false 7", args: args{ticks: ticks, tick: 254, lte: false, tickSpacing: 1}, want0: 255, want1: false},
-		{name: "lte = false 8", args: args{ticks: ticks, tick: 255, lte: false, tickSpacing: 1}, want0: 511, want1: false},
-		{name: "lte = false 9", args: args{ticks: ticks, tick: 256, lte: false, tickSpacing: 1}, want0: 511, want1: false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got0, got1, _ := NextInitializedTickWithinOneWord(tt.args.ticks, tt.args.tick, tt.args.lte, tt.args.tickSpacing)
-			assert.Equal(t, tt.want0, got0)
-			assert.Equal(t, tt.want1, got1)
-		})
-	}
-
-}
-
 func TestGetNearestCurrentTick(t *testing.T) {
 	testCases := []struct {
 		name           string

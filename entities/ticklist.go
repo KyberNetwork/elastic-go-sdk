@@ -2,15 +2,13 @@ package entities
 
 import (
 	"errors"
-	"math"
 	"math/big"
 
 	"github.com/KyberNetwork/elastic-go-sdk/v2/utils"
 )
 
 const (
-	TickIndexZero      = 0
-	TickNotInitialized = false
+	TickIndexZero = 0
 )
 
 var (
@@ -21,7 +19,6 @@ var (
 	ErrEmptyTickList      = errors.New("empty tick list")
 	ErrBelowSmallest      = errors.New("below smallest")
 	ErrAtOrAboveLargest   = errors.New("at or above largest")
-	ErrInvalidTickIndex   = errors.New("invalid tick index")
 )
 
 var (
@@ -70,21 +67,6 @@ func IsAtOrAboveLargest(ticks []Tick, tick int) (bool, error) {
 	}
 
 	return tick >= ticks[len(ticks)-1].Index, nil
-}
-
-func GetTick(ticks []Tick, index int) (Tick, error) {
-	tickIndex, err := binarySearch(ticks, index)
-	if err != nil {
-		return EmptyTick, err
-	}
-
-	if tickIndex < 0 {
-		return EmptyTick, ErrInvalidTickIndex
-	}
-
-	tick := ticks[tickIndex]
-
-	return tick, nil
 }
 
 func NextInitializedTick(ticks []Tick, tick int, lte bool) (Tick, error) {
@@ -139,52 +121,6 @@ func NextInitializedTick(ticks []Tick, tick int, lte bool) (Tick, error) {
 		}
 
 		return ticks[index+1], nil
-	}
-}
-
-func NextInitializedTickWithinOneWord(ticks []Tick, tick int, lte bool, tickSpacing int) (int, bool, error) {
-	compressed := math.Floor(float64(tick) / float64(tickSpacing)) // matches rounding in the code
-
-	if lte {
-		wordPos := int(compressed) >> 8
-		minimum := (wordPos << 8) * tickSpacing
-		isBelowSmallest, err := IsBelowSmallest(ticks, tick)
-		if err != nil {
-			return TickIndexZero, TickNotInitialized, err
-		}
-
-		if isBelowSmallest {
-			return minimum, TickNotInitialized, ErrBelowSmallest
-		}
-
-		nextInitializedTick, err := NextInitializedTick(ticks, tick, lte)
-		if err != nil {
-			return TickIndexZero, TickNotInitialized, err
-		}
-
-		index := nextInitializedTick.Index
-		nextInitializedTickIndex := math.Max(float64(minimum), float64(index))
-		return int(nextInitializedTickIndex), int(nextInitializedTickIndex) == index, nil
-	} else {
-		wordPos := int(compressed+1) >> 8
-		maximum := ((wordPos+1)<<8)*tickSpacing - 1
-		isAtOrAboveLargest, err := IsAtOrAboveLargest(ticks, tick)
-		if err != nil {
-			return TickIndexZero, TickNotInitialized, err
-		}
-
-		if isAtOrAboveLargest {
-			return maximum, TickNotInitialized, ErrAtOrAboveLargest
-		}
-
-		nextInitializedTick, err := NextInitializedTick(ticks, tick, lte)
-		if err != nil {
-			return TickIndexZero, TickNotInitialized, err
-		}
-
-		index := nextInitializedTick.Index
-		nextInitializedTickIndex := math.Min(float64(maximum), float64(index))
-		return int(nextInitializedTickIndex), int(nextInitializedTickIndex) == index, nil
 	}
 }
 
