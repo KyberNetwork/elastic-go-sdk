@@ -2,15 +2,13 @@ package entities
 
 import (
 	"errors"
-	"math"
 	"math/big"
 
 	"github.com/KyberNetwork/elastic-go-sdk/v2/utils"
 )
 
 const (
-	TickIndexZero      = 0
-	TickNotInitialized = false
+	TickIndexZero = 0
 )
 
 var (
@@ -21,7 +19,6 @@ var (
 	ErrEmptyTickList      = errors.New("empty tick list")
 	ErrBelowSmallest      = errors.New("below smallest")
 	ErrAtOrAboveLargest   = errors.New("at or above largest")
-	ErrInvalidTickIndex   = errors.New("invalid tick index")
 )
 
 var (
@@ -70,21 +67,6 @@ func IsAtOrAboveLargest(ticks []Tick, tick int) (bool, error) {
 	}
 
 	return tick >= ticks[len(ticks)-1].Index, nil
-}
-
-func GetTick(ticks []Tick, index int) (Tick, error) {
-	tickIndex, err := binarySearch(ticks, index)
-	if err != nil {
-		return EmptyTick, err
-	}
-
-	if tickIndex < 0 {
-		return EmptyTick, ErrInvalidTickIndex
-	}
-
-	tick := ticks[tickIndex]
-
-	return tick, nil
 }
 
 func NextInitializedTick(ticks []Tick, tick int, lte bool) (Tick, error) {
@@ -142,53 +124,9 @@ func NextInitializedTick(ticks []Tick, tick int, lte bool) (Tick, error) {
 	}
 }
 
-func NextInitializedTickWithinOneWord(ticks []Tick, tick int, lte bool, tickSpacing int) (int, bool, error) {
-	compressed := math.Floor(float64(tick) / float64(tickSpacing)) // matches rounding in the code
-
-	if lte {
-		wordPos := int(compressed) >> 8
-		minimum := (wordPos << 8) * tickSpacing
-		isBelowSmallest, err := IsBelowSmallest(ticks, tick)
-		if err != nil {
-			return TickIndexZero, TickNotInitialized, err
-		}
-
-		if isBelowSmallest {
-			return minimum, TickNotInitialized, ErrBelowSmallest
-		}
-
-		nextInitializedTick, err := NextInitializedTick(ticks, tick, lte)
-		if err != nil {
-			return TickIndexZero, TickNotInitialized, err
-		}
-
-		index := nextInitializedTick.Index
-		nextInitializedTickIndex := math.Max(float64(minimum), float64(index))
-		return int(nextInitializedTickIndex), int(nextInitializedTickIndex) == index, nil
-	} else {
-		wordPos := int(compressed+1) >> 8
-		maximum := ((wordPos+1)<<8)*tickSpacing - 1
-		isAtOrAboveLargest, err := IsAtOrAboveLargest(ticks, tick)
-		if err != nil {
-			return TickIndexZero, TickNotInitialized, err
-		}
-
-		if isAtOrAboveLargest {
-			return maximum, TickNotInitialized, ErrAtOrAboveLargest
-		}
-
-		nextInitializedTick, err := NextInitializedTick(ticks, tick, lte)
-		if err != nil {
-			return TickIndexZero, TickNotInitialized, err
-		}
-
-		index := nextInitializedTick.Index
-		nextInitializedTickIndex := math.Min(float64(maximum), float64(index))
-		return int(nextInitializedTickIndex), int(nextInitializedTickIndex) == index, nil
-	}
-}
-
 func GetNearestCurrentTick(ticks []Tick, currentTick int) (int, error) {
+	// https://github.com/KyberNetwork/ks-elastic-sc/blob/3ba84353cbd88f30f222bb9c673e242a2e46fd12/contracts/PoolStorage.sol#L114
+	// NearestCurrentTick is initialized with MinTick at the beginning
 	isBelowSmallest, err := IsBelowSmallest(ticks, currentTick)
 	if err != nil {
 		return utils.MinTick, err
@@ -210,6 +148,16 @@ func TransformToMap(ticks []Tick) (map[int]TickData, map[int]LinkedListData) {
 	tickDataByIndex := make(map[int]TickData)
 	initializedTicks := make(map[int]LinkedListData)
 
+	// Init the initializedTicks
+	initializedTicks[utils.MinTick] = LinkedListData{
+		Previous: utils.MinTick,
+		Next:     utils.MaxTick,
+	}
+	initializedTicks[utils.MaxTick] = LinkedListData{
+		Previous: utils.MinTick,
+		Next:     utils.MaxTick,
+	}
+
 	for i, t := range ticks {
 		tickDataByIndex[t.Index] = TickData{
 			LiquidityGross: t.LiquidityGross,
@@ -221,15 +169,31 @@ func TransformToMap(ticks []Tick) (map[int]TickData, map[int]LinkedListData) {
 				Next:     utils.MaxTick,
 				Previous: utils.MinTick,
 			}
+			initializedTicks[utils.MinTick] = LinkedListData{
+				Previous: utils.MinTick,
+				Next:     t.Index,
+			}
+			initializedTicks[utils.MaxTick] = LinkedListData{
+				Previous: t.Index,
+				Next:     utils.MaxTick,
+			}
 		} else if i == 0 {
 			initializedTicks[t.Index] = LinkedListData{
 				Next:     ticks[i+1].Index,
 				Previous: utils.MinTick,
 			}
+			initializedTicks[utils.MinTick] = LinkedListData{
+				Previous: utils.MinTick,
+				Next:     t.Index,
+			}
 		} else if i == len(ticks)-1 {
 			initializedTicks[t.Index] = LinkedListData{
 				Next:     utils.MaxTick,
 				Previous: ticks[i-1].Index,
+			}
+			initializedTicks[utils.MaxTick] = LinkedListData{
+				Previous: t.Index,
+				Next:     utils.MaxTick,
 			}
 		} else {
 			initializedTicks[t.Index] = LinkedListData{
